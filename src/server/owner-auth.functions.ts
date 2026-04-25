@@ -43,6 +43,21 @@ export const ownerLogin = createServerFn({ method: "POST" })
     });
     if (error || !signInData.session) throw new Error(error?.message || "Login failed");
 
+    // Ensure a profile row exists for this owner user, migrating any legacy single-tenant row
+    const ownerId = signInData.session.user.id;
+    const { data: own } = await admin.from("profiles").select("id").eq("id", ownerId).maybeSingle();
+    if (!own) {
+      const { data: legacy } = await admin.from("profiles").select("id").neq("id", ownerId).limit(1).maybeSingle();
+      if (legacy) {
+        // Re-point legacy profile + its links/badges to the owner auth uid
+        await admin.from("profile_links").update({ user_id: ownerId }).eq("user_id", legacy.id);
+        await admin.from("profile_badges").update({ user_id: ownerId }).eq("user_id", legacy.id);
+        await admin.from("profiles").update({ id: ownerId }).eq("id", legacy.id);
+      } else {
+        await admin.from("profiles").insert({ id: ownerId, username: "user" });
+      }
+    }
+
     return {
       access_token: signInData.session.access_token,
       refresh_token: signInData.session.refresh_token,
