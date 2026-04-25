@@ -1,21 +1,24 @@
-// Built-in animated background presets (pure CSS — no external assets).
-// Each preset returns a JSX-friendly background style or a small component.
+import DarkVeil from "@/components/effects/DarkVeil";
 
 export type BgPreset = {
   id: string;
   label: string;
-  // CSS background applied to a full-screen div
+  // Static CSS background (used for thumbnails AND for non-animated presets)
   css: React.CSSProperties;
+  // Optional animated renderer used when this preset is the active background
+  render?: () => React.ReactNode;
 };
 
 export const BG_PRESETS: BgPreset[] = [
   {
     id: "darkveil",
     label: "Dark Veil",
+    // Thumbnail fallback approximating the shader's deep-blue veil look
     css: {
       background:
         "radial-gradient(1200px 600px at 70% 30%, rgba(40,90,200,0.55), transparent 60%), radial-gradient(900px 500px at 20% 80%, rgba(20,40,120,0.5), transparent 60%), linear-gradient(180deg, #03070f 0%, #050a18 100%)",
     },
+    render: () => <DarkVeil speed={0.5} hueShift={0} warpAmount={0} />,
   },
   {
     id: "midnight",
