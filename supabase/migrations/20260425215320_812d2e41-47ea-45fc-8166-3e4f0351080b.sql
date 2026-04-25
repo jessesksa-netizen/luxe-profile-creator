@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS background_type text NOT NULL DEFAULT 'image';
