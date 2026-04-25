@@ -14,7 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profile_badges: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          label: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          label: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          label?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profile_links: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          label: string
+          position: number
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          label: string
+          position?: number
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          label?: string
+          position?: number
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          accent_color: string
+          audio_title: string | null
+          audio_url: string | null
+          avatar_url: string | null
+          background_blur: number
+          background_opacity: number
+          background_url: string | null
+          bio: string | null
+          created_at: string
+          cursor_effect: string
+          discord_id: string | null
+          display_name: string | null
+          effect: string
+          id: string
+          monochrome_icons: boolean
+          profile_blur: number
+          profile_opacity: number
+          show_views: boolean
+          text_color: string
+          typewriter_text: string | null
+          updated_at: string
+          username: string
+          view_count: number
+        }
+        Insert: {
+          accent_color?: string
+          audio_title?: string | null
+          audio_url?: string | null
+          avatar_url?: string | null
+          background_blur?: number
+          background_opacity?: number
+          background_url?: string | null
+          bio?: string | null
+          created_at?: string
+          cursor_effect?: string
+          discord_id?: string | null
+          display_name?: string | null
+          effect?: string
+          id: string
+          monochrome_icons?: boolean
+          profile_blur?: number
+          profile_opacity?: number
+          show_views?: boolean
+          text_color?: string
+          typewriter_text?: string | null
+          updated_at?: string
+          username?: string
+          view_count?: number
+        }
+        Update: {
+          accent_color?: string
+          audio_title?: string | null
+          audio_url?: string | null
+          avatar_url?: string | null
+          background_blur?: number
+          background_opacity?: number
+          background_url?: string | null
+          bio?: string | null
+          created_at?: string
+          cursor_effect?: string
+          discord_id?: string | null
+          display_name?: string | null
+          effect?: string
+          id?: string
+          monochrome_icons?: boolean
+          profile_blur?: number
+          profile_opacity?: number
+          show_views?: boolean
+          text_color?: string
+          typewriter_text?: string | null
+          updated_at?: string
+          username?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
