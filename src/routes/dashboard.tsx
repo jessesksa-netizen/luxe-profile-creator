@@ -62,7 +62,11 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
     reload();
   }
 
-  async function uploadFile(bucket: "avatars" | "backgrounds" | "audio", file: File, field: "avatar_url" | "background_url" | "audio_url") {
+  async function uploadFile(
+    bucket: "avatars" | "backgrounds" | "audio",
+    file: File,
+    field: "avatar_url" | "background_url" | "audio_url" | "banner_url",
+  ) {
     const ext = file.name.split(".").pop();
     const path = `${p.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
@@ -122,6 +126,13 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
             <Field label="display name"><input className={inputCls} value={p.display_name ?? ""} onChange={(e) => set("display_name", e.target.value)} /></Field>
             <Field label="bio" full><textarea rows={3} className={inputCls} value={p.bio ?? ""} onChange={(e) => set("bio", e.target.value)} /></Field>
             <Field label="avatar"><FilePick accept="image/*" onPick={(f) => uploadFile("avatars", f, "avatar_url")} preview={p.avatar_url} /></Field>
+            <Field label="banner (card header)">
+              <FilePick
+                accept="image/*,video/*"
+                onPick={(f) => uploadFile("backgrounds", f, "banner_url")}
+                preview={(p as unknown as { banner_url?: string | null }).banner_url ?? null}
+              />
+            </Field>
           </Section>
 
           <section className="glass holo-border rounded-2xl p-5">
