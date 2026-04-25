@@ -84,6 +84,7 @@ export type Database = {
           background_opacity: number
           background_type: string
           background_url: string | null
+          banner_url: string | null
           bio: string | null
           created_at: string
           cursor_effect: string
@@ -110,6 +111,7 @@ export type Database = {
           background_opacity?: number
           background_type?: string
           background_url?: string | null
+          banner_url?: string | null
           bio?: string | null
           created_at?: string
           cursor_effect?: string
@@ -136,6 +138,7 @@ export type Database = {
           background_opacity?: number
           background_type?: string
           background_url?: string | null
+          banner_url?: string | null
           bio?: string | null
           created_at?: string
           cursor_effect?: string
