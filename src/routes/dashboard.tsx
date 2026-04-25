@@ -127,6 +127,15 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
           <Section title="identity">
             <Field label="username"><input className={inputCls} value={p.username} onChange={(e) => set("username", e.target.value)} /></Field>
             <Field label="display name"><input className={inputCls} value={p.display_name ?? ""} onChange={(e) => set("display_name", e.target.value)} /></Field>
+            <Field label="url slug (e.g. sosa → /sosa)" full>
+              <input
+                className={inputCls}
+                placeholder="your-url"
+                value={(p as unknown as { slug?: string | null }).slug ?? ""}
+                onChange={(e) => set("slug" as keyof Profile, e.target.value as Profile[keyof Profile])}
+              />
+              <div className="text-[10px] text-foreground/40 mt-1">letters, numbers, _ or -. Visit it at /{(p as unknown as { slug?: string | null }).slug || "your-url"}</div>
+            </Field>
             <Field label="bio" full><textarea rows={3} className={inputCls} value={p.bio ?? ""} onChange={(e) => set("bio", e.target.value)} /></Field>
             <Field label="avatar"><FilePick accept="image/*" onPick={(f) => uploadFile("avatars", f, "avatar_url")} preview={p.avatar_url} /></Field>
             <Field label="banner (card header)">
@@ -137,6 +146,8 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
               />
             </Field>
           </Section>
+
+          {(p as unknown as { is_owner?: boolean }).is_owner && <UsersManager />}
 
           <section className="glass holo-border rounded-2xl p-5">
             <h2 className="text-xs uppercase tracking-[0.4em] text-foreground/60 mb-4">background</h2>
