@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ALLOWED_DISCORD_ID } from "@/lib/config";
 import { useOwnerProfile, useSession, type Profile, type ProfileLink, type ProfileBadge } from "@/lib/use-profile";
 import { Loader2, Save, Upload, Plus, Trash2, LogOut, Eye } from "lucide-react";
 import { toast, Toaster } from "sonner";
@@ -11,17 +10,14 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { userId, discordId, ready } = useSession();
+  const { userId, ready } = useSession();
   const { profile, links, badges, loading, reload } = useOwnerProfile();
   const nav = useNavigate();
 
   useEffect(() => {
     if (!ready) return;
     if (!userId) { nav({ to: "/login" }); return; }
-    if (discordId !== ALLOWED_DISCORD_ID) {
-      supabase.auth.signOut().then(() => nav({ to: "/login" }));
-    }
-  }, [ready, userId, discordId, nav]);
+  }, [ready, userId, nav]);
 
   if (loading || !ready) {
     return <div className="min-h-screen grid place-items-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
