@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ownerLogin } from "@/server/owner-auth.functions";
+import { ownerLogin, userLogin } from "@/server/owner-auth.functions";
 import { Loader2, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
@@ -9,6 +9,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const [slug, setSlug] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -18,7 +19,9 @@ function LoginPage() {
     e.preventDefault();
     setBusy(true); setError(null);
     try {
-      const tokens = await ownerLogin({ data: { password } });
+      const tokens = slug.trim()
+        ? await userLogin({ data: { slug: slug.trim(), password } })
+        : await ownerLogin({ data: { password } });
       const { error: setErr } = await supabase.auth.setSession({
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
@@ -39,15 +42,22 @@ function LoginPage() {
       <form onSubmit={onSubmit} className="glass holo-border rounded-3xl p-8 w-full max-w-sm text-center glow animate-fade-up">
         <div className="mx-auto h-12 w-12 rounded-2xl grid place-items-center holo-bg mb-3"><Lock className="h-5 w-5" /></div>
         <h1 className="text-3xl font-bold holo-text">welcome back</h1>
-        <p className="text-sm text-foreground/70 mt-2">enter the owner password to continue</p>
+        <p className="text-sm text-foreground/70 mt-2">leave username blank for owner login</p>
+
+        <input
+          type="text"
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder="username (optional)"
+          className="mt-6 w-full rounded-xl bg-background/40 border border-white/10 px-4 py-3 text-center outline-none focus:border-white/30 transition"
+        />
 
         <input
           type="password"
-          autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="mt-6 w-full rounded-xl bg-background/40 border border-white/10 px-4 py-3 text-center tracking-widest outline-none focus:border-white/30 transition"
+          className="mt-3 w-full rounded-xl bg-background/40 border border-white/10 px-4 py-3 text-center tracking-widest outline-none focus:border-white/30 transition"
         />
 
         <button
@@ -59,7 +69,7 @@ function LoginPage() {
         </button>
 
         {error && <p className="mt-4 text-xs text-destructive">{error}</p>}
-        <p className="mt-6 text-[10px] text-foreground/40 tracking-widest uppercase">private — owner only</p>
+        <p className="mt-6 text-[10px] text-foreground/40 tracking-widest uppercase">private</p>
       </form>
     </div>
   );
