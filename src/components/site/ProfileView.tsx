@@ -22,6 +22,7 @@ export function ProfileView({ profile, links, badges, autoPlayAudio = false }: {
   const accent = profile.accent_color || "#a855f7";
   const text = profile.text_color || "#ffffff";
   const bgUrl = profile.background_url;
+  const bannerUrl = (profile as unknown as { banner_url?: string | null }).banner_url ?? null;
   // background_type: "image" | "video" | "preset:<id>"
   const bgType = (profile as unknown as { background_type?: string }).background_type ?? "image";
   const preset = bgType.startsWith("preset:") ? BG_PRESETS.find((p) => p.id === bgType.slice(7)) : null;
@@ -80,10 +81,12 @@ export function ProfileView({ profile, links, badges, autoPlayAudio = false }: {
             style={{ background: "rgba(10, 10, 12, 0.72)", backdropFilter: "blur(28px) saturate(140%)", WebkitBackdropFilter: "blur(28px) saturate(140%)" }}
           >
             <div className="relative h-36 overflow-hidden">
-              {bgUrl && bgType !== "video" ? (
-                <img src={bgUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              ) : bgUrl && bgType === "video" ? (
-                <video src={bgUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+              {bannerUrl ? (
+                /\.(mp4|webm|mov)(\?|$)/i.test(bannerUrl) ? (
+                  <video src={bannerUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <img src={bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                )
               ) : (
                 <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}33)` }} />
               )}
