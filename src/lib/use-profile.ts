@@ -15,7 +15,8 @@ export function useOwnerProfile() {
   async function load() {
     setLoading(true);
     // Owner profile = the row marked is_owner; fallback to oldest profile.
-    let { data: p } = await supabase.from("profiles").select("*").eq("is_owner", true).maybeSingle();
+    const ownerRes = await supabase.from("profiles").select("*").eq("is_owner", true).maybeSingle();
+    let p: Profile | null = ownerRes.data;
     if (!p) {
       const { data: fallback } = await supabase.from("profiles").select("*").order("created_at", { ascending: true }).limit(1).maybeSingle();
       p = fallback ?? null;
