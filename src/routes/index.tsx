@@ -39,13 +39,13 @@ function Index() {
         <Splash
           onEnter={() => setEntered(true)}
           accent={profile.accent_color}
-          audioSrc={profile.audio_url}
           backgroundUrl={profile.background_url}
+          backgroundType={(profile as unknown as { background_type?: string }).background_type}
           backgroundBlur={profile.background_blur}
           username={profile.username}
         />
       )}
-      <ProfileView profile={profile} links={links} badges={badges} />
+      <ProfileView profile={profile} links={links} badges={badges} autoPlayAudio={entered} />
     </>
   );
 }

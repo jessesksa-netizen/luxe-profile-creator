@@ -82,6 +82,7 @@ export type Database = {
           avatar_url: string | null
           background_blur: number
           background_opacity: number
+          background_type: string
           background_url: string | null
           bio: string | null
           created_at: string
@@ -107,6 +108,7 @@ export type Database = {
           avatar_url?: string | null
           background_blur?: number
           background_opacity?: number
+          background_type?: string
           background_url?: string | null
           bio?: string | null
           created_at?: string
@@ -132,6 +134,7 @@ export type Database = {
           avatar_url?: string | null
           background_blur?: number
           background_opacity?: number
+          background_type?: string
           background_url?: string | null
           bio?: string | null
           created_at?: string
