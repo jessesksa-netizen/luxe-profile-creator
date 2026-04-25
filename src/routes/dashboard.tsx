@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOwnerProfile, useSession, type Profile, type ProfileLink, type ProfileBadge } from "@/lib/use-profile";
+import { useMyProfile, useSession, type Profile, type ProfileLink, type ProfileBadge } from "@/lib/use-profile";
 import { Loader2, Save, Upload, Plus, Trash2, LogOut, Eye, Check } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { BG_PRESETS } from "@/lib/bg-presets";
+import { ownerListUsers, ownerCreateUser, ownerSetUserPassword, ownerDeleteUser } from "@/server/owner-auth.functions";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const { userId, ready } = useSession();
-  const { profile, links, badges, loading, reload } = useOwnerProfile();
+  const { profile, links, badges, loading, reload } = useMyProfile(userId);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -42,6 +43,8 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
 
   async function save() {
     setSaving(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const slug = (p as any).slug as string | null;
     const { data: updated, error } = await supabase.from("profiles").update({
       username: p.username, display_name: p.display_name, bio: p.bio,
       background_blur: p.background_blur, background_opacity: p.background_opacity,
@@ -50,7 +53,7 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
       effect: p.effect, cursor_effect: p.cursor_effect,
       show_views: p.show_views, audio_title: p.audio_title,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...({ background_type: (p as any).background_type } as any),
+      ...({ background_type: (p as any).background_type, slug } as any),
     }).eq("id", p.id).select();
     setSaving(false);
     if (error) { toast.error(error.message); return; }
