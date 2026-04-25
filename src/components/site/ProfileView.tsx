@@ -4,6 +4,7 @@ import type { Profile, ProfileLink, ProfileBadge } from "@/lib/use-profile";
 import { AmbientEffects } from "@/components/effects/AmbientEffects";
 import { CursorTrail } from "@/components/effects/CursorTrail";
 import { MusicPlayer } from "@/components/site/MusicPlayer";
+import { BG_PRESETS } from "@/lib/bg-presets";
 import { supabase } from "@/integrations/supabase/client";
 
 function Icon({ name, className, style }: { name?: string | null; className?: string; style?: React.CSSProperties }) {
@@ -12,21 +13,36 @@ function Icon({ name, className, style }: { name?: string | null; className?: st
   return <Comp className={className} style={style} />;
 }
 
-export function ProfileView({ profile, links, badges }: { profile: Profile; links: ProfileLink[]; badges: ProfileBadge[] }) {
+export function ProfileView({ profile, links, badges, autoPlayAudio = false }: { profile: Profile; links: ProfileLink[]; badges: ProfileBadge[]; autoPlayAudio?: boolean }) {
   useEffect(() => {
     supabase.from("profiles").update({ view_count: (profile.view_count ?? 0) + 1 }).eq("id", profile.id).then(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id]);
 
   const accent = profile.accent_color || "#a855f7";
   const text = profile.text_color || "#ffffff";
   const bgUrl = profile.background_url;
+  // background_type: "image" | "video" | "preset:<id>"
+  const bgType = (profile as unknown as { background_type?: string }).background_type ?? "image";
+  const preset = bgType.startsWith("preset:") ? BG_PRESETS.find((p) => p.id === bgType.slice(7)) : null;
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-black" style={{ color: text }}>
       {/* Background */}
       <div className="absolute inset-0 -z-10">
-        {bgUrl ? (
+        {preset ? (
+          <div className="h-full w-full" style={preset.css} />
+        ) : bgUrl && bgType === "video" ? (
+          <video
+            src={bgUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="h-full w-full object-cover"
+            style={{ filter: `blur(${profile.background_blur}px)`, opacity: profile.background_opacity, transform: "scale(1.1)" }}
+          />
+        ) : bgUrl ? (
           <img
             src={bgUrl}
             alt=""
@@ -34,7 +50,7 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
             style={{ filter: `blur(${profile.background_blur}px)`, opacity: profile.background_opacity, transform: "scale(1.1)" }}
           />
         ) : (
-          <div className="h-full w-full" style={{ background: `radial-gradient(ellipse at 30% 20%, ${accent}22, transparent 60%), radial-gradient(ellipse at 70% 80%, ${accent}18, transparent 60%), #000` }} />
+          <div className="h-full w-full" style={BG_PRESETS[0].css} />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60" />
       </div>
@@ -42,7 +58,6 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
       <AmbientEffects effect={profile.effect} color={accent} />
       <CursorTrail enabled={profile.cursor_effect === "trail"} color={accent} />
 
-      {/* View counter pill */}
       {profile.show_views && (
         <div className="absolute top-5 right-5 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs">
           <Icons.Eye className="h-3 w-3 opacity-70" />
@@ -60,9 +75,10 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
             className="relative rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl"
             style={{ background: "rgba(10, 10, 12, 0.72)", backdropFilter: "blur(28px) saturate(140%)", WebkitBackdropFilter: "blur(28px) saturate(140%)" }}
           >
-            {/* Cover header */}
             <div className="relative h-36 overflow-hidden">
-              {bgUrl ? (
+              {preset ? (
+                <div className="absolute inset-0" style={preset.css} />
+              ) : bgUrl && bgType !== "video" ? (
                 <img src={bgUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
               ) : (
                 <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}33)` }} />
@@ -70,7 +86,6 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-[rgba(10,10,12,0.95)]" />
             </div>
 
-            {/* Avatar */}
             <div className="relative -mt-12 flex justify-center">
               <div className="relative">
                 <div className="absolute -inset-1 rounded-full blur-md opacity-60" style={{ background: accent }} />
@@ -87,9 +102,7 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
               </div>
             </div>
 
-            {/* Body */}
             <div className="px-6 pt-4 pb-6">
-              {/* Name + handle */}
               <div className="text-center">
                 <h1 className="text-2xl font-bold tracking-tight">
                   {profile.display_name || profile.username}
@@ -97,12 +110,10 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
                 <p className="text-sm mt-0.5" style={{ color: accent }}>@{profile.username}</p>
               </div>
 
-              {/* Bio */}
               {profile.bio && (
                 <p className="mt-3 text-sm text-center text-white/70 leading-relaxed whitespace-pre-line">{profile.bio}</p>
               )}
 
-              {/* Badges */}
               {badges.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-2 mt-4">
                   {badges.map((b) => (
@@ -118,12 +129,10 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
                 </div>
               )}
 
-              {/* Divider */}
               {(badges.length > 0 || profile.bio) && links.length > 0 && (
                 <div className="my-5 h-px bg-white/[0.06]" />
               )}
 
-              {/* Links */}
               {links.length > 0 && (
                 <div className="grid gap-2">
                   {links.map((l) => (
@@ -144,16 +153,14 @@ export function ProfileView({ profile, links, badges }: { profile: Profile; link
                 </div>
               )}
 
-              {/* Music player */}
               {profile.audio_url && (
                 <div className="mt-5">
-                  <MusicPlayer src={profile.audio_url} title={profile.audio_title} color={accent} cover={profile.avatar_url} />
+                  <MusicPlayer src={profile.audio_url} title={profile.audio_title} color={accent} autoPlay={autoPlayAudio} />
                 </div>
               )}
             </div>
           </div>
 
-          {/* Footer mark */}
           <div className="mt-4 text-center text-[10px] tracking-[0.3em] uppercase text-white/30">
             @{profile.username}
           </div>
