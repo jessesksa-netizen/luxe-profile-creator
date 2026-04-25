@@ -28,9 +28,9 @@ export function ProfileView({ profile, links, badges, autoPlayAudio = false }: {
   const preset = bgType.startsWith("preset:") ? BG_PRESETS.find((p) => p.id === bgType.slice(7)) : null;
 
   return (
-    <div className="relative min-h-screen w-full bg-black" style={{ color: text }}>
+    <div className="relative min-h-screen w-full overflow-hidden bg-black" style={{ color: text }}>
       {/* Page background — fills the viewport behind everything */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
+      <div className="fixed inset-0 z-0 overflow-hidden">
         {preset ? (
           preset.render ? (
             <div className="absolute inset-0 h-full w-full">{preset.render()}</div>
