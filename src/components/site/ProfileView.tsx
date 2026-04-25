@@ -31,7 +31,11 @@ export function ProfileView({ profile, links, badges, autoPlayAudio = false }: {
       {/* Background */}
       <div className="absolute inset-0 -z-10">
         {preset ? (
-          <div className="h-full w-full" style={preset.css} />
+          preset.render ? (
+            <div className="absolute inset-0">{preset.render()}</div>
+          ) : (
+            <div className="h-full w-full" style={preset.css} />
+          )
         ) : bgUrl && bgType === "video" ? (
           <video
             src={bgUrl}
