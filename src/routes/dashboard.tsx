@@ -63,8 +63,9 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
     if (error) { toast.error(error.message); return; }
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    const update: Partial<Profile> = { [field]: data.publicUrl };
-    const { error: e2 } = await supabase.from("profiles").update(update).eq("id", p.id);
+    const update = { [field]: data.publicUrl } as Partial<Profile>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: e2 } = await supabase.from("profiles").update(update as any).eq("id", p.id);
     if (e2) toast.error(e2.message); else { toast.success("uploaded"); reload(); }
   }
 
