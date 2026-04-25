@@ -35,7 +35,16 @@ function Index() {
 
   return (
     <>
-      {!entered && <Splash onEnter={() => setEntered(true)} accent={profile.accent_color} audioSrc={profile.audio_url} />}
+      {!entered && (
+        <Splash
+          onEnter={() => setEntered(true)}
+          accent={profile.accent_color}
+          audioSrc={profile.audio_url}
+          backgroundUrl={profile.background_url}
+          backgroundBlur={profile.background_blur}
+          username={profile.username}
+        />
+      )}
       <ProfileView profile={profile} links={links} badges={badges} />
     </>
   );
