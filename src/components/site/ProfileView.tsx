@@ -27,12 +27,12 @@ export function ProfileView({ profile, links, badges, autoPlayAudio = false }: {
   const preset = bgType.startsWith("preset:") ? BG_PRESETS.find((p) => p.id === bgType.slice(7)) : null;
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-black" style={{ color: text }}>
-      {/* Background */}
-      <div className="absolute inset-0 -z-10">
+    <div className="relative min-h-screen w-full bg-black" style={{ color: text }}>
+      {/* Page background — fills the viewport behind everything */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
         {preset ? (
           preset.render ? (
-            <div className="absolute inset-0">{preset.render()}</div>
+            <div className="absolute inset-0 h-full w-full">{preset.render()}</div>
           ) : (
             <div className="h-full w-full" style={preset.css} />
           )
@@ -80,10 +80,10 @@ export function ProfileView({ profile, links, badges, autoPlayAudio = false }: {
             style={{ background: "rgba(10, 10, 12, 0.72)", backdropFilter: "blur(28px) saturate(140%)", WebkitBackdropFilter: "blur(28px) saturate(140%)" }}
           >
             <div className="relative h-36 overflow-hidden">
-              {preset ? (
-                <div className="absolute inset-0" style={preset.css} />
-              ) : bgUrl && bgType !== "video" ? (
+              {bgUrl && bgType !== "video" ? (
                 <img src={bgUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : bgUrl && bgType === "video" ? (
+                <video src={bgUrl} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
               ) : (
                 <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}33)` }} />
               )}
