@@ -2,8 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOwnerProfile, useSession, type Profile, type ProfileLink, type ProfileBadge } from "@/lib/use-profile";
-import { Loader2, Save, Upload, Plus, Trash2, LogOut, Eye } from "lucide-react";
+import { Loader2, Save, Upload, Plus, Trash2, LogOut, Eye, Check } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import { BG_PRESETS } from "@/lib/bg-presets";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -41,16 +42,24 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
 
   async function save() {
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({
+    const { data: updated, error } = await supabase.from("profiles").update({
       username: p.username, display_name: p.display_name, bio: p.bio,
       background_blur: p.background_blur, background_opacity: p.background_opacity,
       profile_blur: p.profile_blur, profile_opacity: p.profile_opacity,
       accent_color: p.accent_color, text_color: p.text_color,
       effect: p.effect, cursor_effect: p.cursor_effect,
       show_views: p.show_views, audio_title: p.audio_title,
-    }).eq("id", p.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...({ background_type: (p as any).background_type } as any),
+    }).eq("id", p.id).select();
     setSaving(false);
-    if (error) toast.error(error.message); else { toast.success("saved"); reload(); }
+    if (error) { toast.error(error.message); return; }
+    if (!updated || updated.length === 0) {
+      toast.error("nothing was saved — try logging out and back in");
+      return;
+    }
+    toast.success("saved");
+    reload();
   }
 
   async function uploadFile(bucket: "avatars" | "backgrounds" | "audio", file: File, field: "avatar_url" | "background_url" | "audio_url") {
@@ -59,11 +68,26 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
     if (error) { toast.error(error.message); return; }
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    const update = { [field]: data.publicUrl } as Partial<Profile>;
+    // Detect video for background uploads
+    const isVideo = field === "background_url" && file.type.startsWith("video/");
+    const update = isVideo
+      ? ({ [field]: data.publicUrl, background_type: "video" } as unknown as Partial<Profile>)
+      : field === "background_url"
+      ? ({ [field]: data.publicUrl, background_type: "image" } as unknown as Partial<Profile>)
+      : ({ [field]: data.publicUrl } as Partial<Profile>);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: e2 } = await supabase.from("profiles").update(update as any).eq("id", p.id);
     if (e2) toast.error(e2.message); else { toast.success("uploaded"); reload(); }
   }
+
+  async function selectPreset(presetId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase.from("profiles").update({ background_type: `preset:${presetId}` } as any).eq("id", p.id);
+    if (error) toast.error(error.message); else { toast.success("background set"); reload(); }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const currentBgType: string = ((p as any).background_type as string) ?? "image";
 
   return (
     <div className="min-h-screen text-foreground">
@@ -98,13 +122,36 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
             <Field label="display name"><input className={inputCls} value={p.display_name ?? ""} onChange={(e) => set("display_name", e.target.value)} /></Field>
             <Field label="bio" full><textarea rows={3} className={inputCls} value={p.bio ?? ""} onChange={(e) => set("bio", e.target.value)} /></Field>
             <Field label="avatar"><FilePick accept="image/*" onPick={(f) => uploadFile("avatars", f, "avatar_url")} preview={p.avatar_url} /></Field>
-            <Field label="background"><FilePick accept="image/*" onPick={(f) => uploadFile("backgrounds", f, "background_url")} preview={p.background_url} /></Field>
           </Section>
 
-          <Section title="background">
+          <section className="glass holo-border rounded-2xl p-5">
+            <h2 className="text-xs uppercase tracking-[0.4em] text-foreground/60 mb-4">background</h2>
+            <div className="text-[11px] uppercase tracking-wider text-foreground/50 mb-2">presets</div>
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {BG_PRESETS.map((preset) => {
+                const active = currentBgType === `preset:${preset.id}`;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => selectPreset(preset.id)}
+                    className={`relative h-20 rounded-lg overflow-hidden border transition ${active ? "border-white/60 ring-2 ring-white/40" : "border-white/10 hover:border-white/30"}`}
+                  >
+                    <div className="absolute inset-0" style={preset.css} />
+                    <div className="absolute inset-x-0 bottom-0 px-2 py-1 bg-black/50 text-[10px] text-white/90 text-left">{preset.label}</div>
+                    {active && <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-white grid place-items-center"><Check className="h-3 w-3 text-black" /></div>}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-[11px] uppercase tracking-wider text-foreground/50 mb-2">upload your own (image or video)</div>
+            <FilePick accept="image/*,video/*" onPick={(f) => uploadFile("backgrounds", f, "background_url")} preview={currentBgType !== "image" && currentBgType !== "video" ? null : p.background_url} />
+            <div className="text-[10px] text-foreground/40 mt-2">current: {currentBgType.startsWith("preset:") ? `preset · ${currentBgType.slice(7)}` : currentBgType}</div>
+            <div className="grid sm:grid-cols-2 gap-4 mt-5">
             <Slider label="blur" value={p.background_blur} min={0} max={40} onChange={(v) => set("background_blur", v)} />
             <Slider label="opacity" value={p.background_opacity * 100} min={0} max={100} onChange={(v) => set("background_opacity", v / 100)} suffix="%" />
-          </Section>
+            </div>
+          </section>
 
           <Section title="profile card">
             <Slider label="blur" value={p.profile_blur} min={0} max={20} onChange={(v) => set("profile_blur", v)} />
