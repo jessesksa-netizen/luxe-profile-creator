@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOwnerProfile, useSession, type Profile, type ProfileLink, type ProfileBadge } from "@/lib/use-profile";
+import { useMyProfile, useSession, type Profile, type ProfileLink, type ProfileBadge } from "@/lib/use-profile";
 import { Loader2, Save, Upload, Plus, Trash2, LogOut, Eye, Check } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { BG_PRESETS } from "@/lib/bg-presets";
+import { ownerListUsers, ownerCreateUser, ownerSetUserPassword, ownerDeleteUser } from "@/server/owner-auth.functions";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const { userId, ready } = useSession();
-  const { profile, links, badges, loading, reload } = useOwnerProfile();
+  const { profile, links, badges, loading, reload } = useMyProfile(userId);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -42,6 +43,8 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
 
   async function save() {
     setSaving(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const slug = (p as any).slug as string | null;
     const { data: updated, error } = await supabase.from("profiles").update({
       username: p.username, display_name: p.display_name, bio: p.bio,
       background_blur: p.background_blur, background_opacity: p.background_opacity,
@@ -50,7 +53,7 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
       effect: p.effect, cursor_effect: p.cursor_effect,
       show_views: p.show_views, audio_title: p.audio_title,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...({ background_type: (p as any).background_type } as any),
+      ...({ background_type: (p as any).background_type, slug } as any),
     }).eq("id", p.id).select();
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -124,6 +127,15 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
           <Section title="identity">
             <Field label="username"><input className={inputCls} value={p.username} onChange={(e) => set("username", e.target.value)} /></Field>
             <Field label="display name"><input className={inputCls} value={p.display_name ?? ""} onChange={(e) => set("display_name", e.target.value)} /></Field>
+            <Field label="url slug (e.g. sosa → /sosa)" full>
+              <input
+                className={inputCls}
+                placeholder="your-url"
+                value={(p as unknown as { slug?: string | null }).slug ?? ""}
+                onChange={(e) => set("slug" as keyof Profile, e.target.value as Profile[keyof Profile])}
+              />
+              <div className="text-[10px] text-foreground/40 mt-1">letters, numbers, _ or -. Visit it at /{(p as unknown as { slug?: string | null }).slug || "your-url"}</div>
+            </Field>
             <Field label="bio" full><textarea rows={3} className={inputCls} value={p.bio ?? ""} onChange={(e) => set("bio", e.target.value)} /></Field>
             <Field label="avatar"><FilePick accept="image/*" onPick={(f) => uploadFile("avatars", f, "avatar_url")} preview={p.avatar_url} /></Field>
             <Field label="banner (card header)">
@@ -134,6 +146,8 @@ function DashboardInner({ profile, links, badges, reload }: { profile: Profile; 
               />
             </Field>
           </Section>
+
+          {(p as unknown as { is_owner?: boolean }).is_owner && <UsersManager />}
 
           <section className="glass holo-border rounded-2xl p-5">
             <h2 className="text-xs uppercase tracking-[0.4em] text-foreground/60 mb-4">background</h2>
@@ -329,6 +343,118 @@ function BadgesManager({ userId, badges, reload }: { userId: string; badges: Pro
         <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 rounded cursor-pointer bg-transparent" />
         <button onClick={add} className="inline-flex items-center justify-center gap-1.5 text-sm px-3 py-2 rounded-lg holo-bg text-black"><Plus className="h-4 w-4" /> add</button>
       </div>
+    </section>
+  );
+}
+
+function UsersManager() {
+  const [ownerPassword, setOwnerPassword] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [users, setUsers] = useState<Array<{ id: string; slug: string | null; username: string; display_name: string | null; is_owner: boolean }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [newSlug, setNewSlug] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+
+  async function unlock() {
+    if (!ownerPassword) return;
+    setBusy(true);
+    try {
+      const res = await ownerListUsers({ data: { ownerPassword } });
+      setUsers(res.users as typeof users);
+      setUnlocked(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "failed");
+    } finally { setBusy(false); }
+  }
+
+  async function refresh() {
+    try {
+      const res = await ownerListUsers({ data: { ownerPassword } });
+      setUsers(res.users as typeof users);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "failed");
+    }
+  }
+
+  async function create() {
+    if (!newSlug || !newPwd) return;
+    setBusy(true);
+    try {
+      await ownerCreateUser({ data: { ownerPassword, slug: newSlug, password: newPwd } });
+      toast.success(`created /${newSlug}`);
+      setNewSlug(""); setNewPwd("");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "failed");
+    } finally { setBusy(false); }
+  }
+
+  async function changePwd(userId: string) {
+    const pwd = window.prompt("new password (min 4 chars)");
+    if (!pwd) return;
+    try {
+      await ownerSetUserPassword({ data: { ownerPassword, userId, password: pwd } });
+      toast.success("password updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "failed");
+    }
+  }
+
+  async function remove(userId: string, slug: string | null) {
+    if (!window.confirm(`delete user /${slug ?? userId}? This wipes their profile.`)) return;
+    try {
+      await ownerDeleteUser({ data: { ownerPassword, userId } });
+      toast.success("deleted");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "failed");
+    }
+  }
+
+  return (
+    <section className="glass holo-border rounded-2xl p-5">
+      <h2 className="text-xs uppercase tracking-[0.4em] text-foreground/60 mb-4">manage users (owner only)</h2>
+      {!unlocked ? (
+        <div className="space-y-3">
+          <p className="text-xs text-foreground/60">re-enter your owner password to manage other accounts.</p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              className={inputCls + " flex-1"}
+              placeholder="owner password"
+              value={ownerPassword}
+              onChange={(e) => setOwnerPassword(e.target.value)}
+            />
+            <button onClick={unlock} disabled={busy || !ownerPassword} className="px-4 rounded-lg holo-bg text-black text-sm disabled:opacity-50">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "unlock"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2 mb-4">
+            {users.map((u) => (
+              <div key={u.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+                <span className="text-xs text-foreground/40 w-16">{u.is_owner ? "owner" : "user"}</span>
+                <span className="text-sm flex-1 truncate">/{u.slug ?? u.username}</span>
+                <span className="text-xs text-foreground/50 truncate max-w-[160px]">{u.display_name ?? ""}</span>
+                {!u.is_owner && (
+                  <>
+                    <button onClick={() => changePwd(u.id)} className="text-xs px-2 py-1 rounded glass hover:bg-white/10">password</button>
+                    <button onClick={() => remove(u.id, u.slug)} className="h-7 w-7 grid place-items-center rounded text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="grid sm:grid-cols-3 gap-2">
+            <input className={inputCls} placeholder="slug (e.g. sosa)" value={newSlug} onChange={(e) => setNewSlug(e.target.value)} />
+            <input className={inputCls} placeholder="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
+            <button onClick={create} disabled={busy || !newSlug || !newPwd} className="inline-flex items-center justify-center gap-1.5 text-sm px-3 py-2 rounded-lg holo-bg text-black disabled:opacity-50"><Plus className="h-4 w-4" /> create user</button>
+          </div>
+          <p className="text-[10px] text-foreground/40 mt-2">they sign in at /login with their slug + password and land on /dashboard. Their profile lives at /{newSlug || "slug"}.</p>
+        </>
+      )}
     </section>
   );
 }
