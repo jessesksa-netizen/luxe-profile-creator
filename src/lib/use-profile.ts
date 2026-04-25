@@ -14,8 +14,12 @@ export function useOwnerProfile() {
 
   async function load() {
     setLoading(true);
-    // Owner profile = the most recently updated one (single-tenant site)
-    const { data: p } = await supabase.from("profiles").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    // Owner profile = the row marked is_owner; fallback to oldest profile.
+    let { data: p } = await supabase.from("profiles").select("*").eq("is_owner", true).maybeSingle();
+    if (!p) {
+      const { data: fallback } = await supabase.from("profiles").select("*").order("created_at", { ascending: true }).limit(1).maybeSingle();
+      p = fallback ?? null;
+    }
     if (p) {
       setProfile(p);
       const [{ data: l }, { data: b }] = await Promise.all([
@@ -29,6 +33,59 @@ export function useOwnerProfile() {
   }
 
   useEffect(() => { load(); }, []);
+  return { profile, links, badges, loading, reload: load };
+}
+
+export function useProfileBySlug(slug: string | undefined) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [links, setLinks] = useState<ProfileLink[]>([]);
+  const [badges, setBadges] = useState<ProfileBadge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  async function load() {
+    if (!slug) return;
+    setLoading(true); setNotFound(false);
+    const { data: p } = await supabase.from("profiles").select("*").ilike("slug", slug).maybeSingle();
+    if (!p) { setNotFound(true); setLoading(false); return; }
+    setProfile(p);
+    const [{ data: l }, { data: b }] = await Promise.all([
+      supabase.from("profile_links").select("*").eq("user_id", p.id).order("position"),
+      supabase.from("profile_badges").select("*").eq("user_id", p.id).order("position"),
+    ]);
+    setLinks(l ?? []);
+    setBadges(b ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [slug]);
+  return { profile, links, badges, loading, notFound, reload: load };
+}
+
+/** Loads the profile row for the currently logged-in user (used in dashboard). */
+export function useMyProfile(userId: string | null) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [links, setLinks] = useState<ProfileLink[]>([]);
+  const [badges, setBadges] = useState<ProfileBadge[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    if (!userId) { setLoading(false); return; }
+    setLoading(true);
+    const { data: p } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    if (p) {
+      setProfile(p);
+      const [{ data: l }, { data: b }] = await Promise.all([
+        supabase.from("profile_links").select("*").eq("user_id", p.id).order("position"),
+        supabase.from("profile_badges").select("*").eq("user_id", p.id).order("position"),
+      ]);
+      setLinks(l ?? []);
+      setBadges(b ?? []);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [userId]);
   return { profile, links, badges, loading, reload: load };
 }
 
