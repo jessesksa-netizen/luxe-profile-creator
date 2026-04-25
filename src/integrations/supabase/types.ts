@@ -92,10 +92,12 @@ export type Database = {
           display_name: string | null
           effect: string
           id: string
+          is_owner: boolean
           monochrome_icons: boolean
           profile_blur: number
           profile_opacity: number
           show_views: boolean
+          slug: string | null
           text_color: string
           typewriter_text: string | null
           updated_at: string
@@ -119,10 +121,12 @@ export type Database = {
           display_name?: string | null
           effect?: string
           id: string
+          is_owner?: boolean
           monochrome_icons?: boolean
           profile_blur?: number
           profile_opacity?: number
           show_views?: boolean
+          slug?: string | null
           text_color?: string
           typewriter_text?: string | null
           updated_at?: string
@@ -146,10 +150,12 @@ export type Database = {
           display_name?: string | null
           effect?: string
           id?: string
+          is_owner?: boolean
           monochrome_icons?: boolean
           profile_blur?: number
           profile_opacity?: number
           show_views?: boolean
+          slug?: string | null
           text_color?: string
           typewriter_text?: string | null
           updated_at?: string
